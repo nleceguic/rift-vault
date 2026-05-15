@@ -40,8 +40,13 @@ FONTS = {
 #    set RIFT_VAULT_DATA_DIR=D:\rift_portable\data   (Windows)
 #    export RIFT_VAULT_DATA_DIR=/mnt/usb/rift_data   (Linux/Mac)
 import os
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOGO_PATH     = os.path.join(_PROJECT_ROOT, "logo.png")
+import sys
+
+def _resource(relative: str) -> str:
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(base, relative)
+
+LOGO_PATH = _resource("logo.png")
 DATA_DIR      = os.environ.get("RIFT_VAULT_DATA_DIR") or os.path.join(os.path.expanduser("~"), ".rift_vault")
 ACCOUNTS_FILE  = os.path.join(DATA_DIR, "accounts.json")   # legado; activo hasta migración
 SQLITE_FILE    = os.path.join(DATA_DIR, "accounts.db")
