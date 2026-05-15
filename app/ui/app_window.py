@@ -86,51 +86,41 @@ class AppWindow(ctk.CTk):
         self._bus.subscribe("clipboard.cleared", lambda **_: self._on_clipboard_cleared())
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-
-        # Move focus to AppWindow before creating the curtain CTkToplevel.
-        # On Windows, CTkToplevel.__init__ calls focus_get() and schedules
-        # after(10, saved_widget.focus). If the entry still has focus here,
-        # that callback fires on a destroyed widget after unlock_view.destroy().
         self.focus_set()
-        self.update_idletasks()
-        wx, wy = self.winfo_x(), self.winfo_y()
-        ww, wh = self.winfo_width(), self.winfo_height()
 
-        curtain = ctk.CTkToplevel(self)
-        curtain.overrideredirect(True)
-        try:
-            curtain.attributes("-alpha", 0.0)
-        except Exception:
-            pass
-        curtain.configure(fg_color=COLORS["bg_primary"])
-        curtain.geometry(f"{ww}x{wh}+{wx}+{wy}")
-        curtain.lift()
-        curtain.update_idletasks()
-        try:
-            curtain.attributes("-alpha", 1.0)
-        except Exception:
-            pass
+        # Sacar unlock_view del grid con place() para que los cambios de columnas
+        # no la deformen mientras sigue visible.
+        self._unlock_view.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self._unlock_view.grid_forget()
 
-        try:
-            self._unlock_view.cleanup()
-        except Exception:
-            pass
-        self._unlock_view.destroy()
-
+        # Configurar el grid del main layout
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        # Diferir el build al siguiente tick para que el spinner anime un frame más
+        self.after(0, self._build_main_ui)
+
+    def _build_main_ui(self):
         self._build_sidebar()
+        self._sidebar.grid_remove()
+
         self._build_content_area()
+        self._content.grid_remove()
+
         self._build_views()
         self._nav_buttons = {}
         self._register_nav_buttons()
         self._navigate("home")
-
         self._setup_inactivity_timer()
         self._setup_shortcuts()
-        self.after(60, lambda: self._slide_curtain_up(curtain, wx, wy, ww, wh))
+
+        self.update_idletasks()
+
+        # Todo cargado — swap atómico: destruir unlock y mostrar la UI lista
+        self._unlock_view.destroy()
+        self._sidebar.grid()
+        self._content.grid()
 
     def _setup_shortcuts(self):
         self.bind_all("<Control-n>", self._shortcut_new_account, add=True)
@@ -467,6 +457,30 @@ class AppWindow(ctk.CTk):
             if new_view and new_view.winfo_exists():
                 new_view.place(relx=0, rely=0, relwidth=1, relheight=1)
             self._transitioning = False
+
+    def _slide_overlay_up(self, overlay, step: int = 0, steps: int = 9,
+                          interval: int = 16, on_done=None):
+        t = (step + 1) / steps
+        ease = t * t  # quadratic ease-in: acelera hacia arriba
+        try:
+            if overlay.winfo_exists():
+                overlay.lift()  # mantener encima en cada frame
+                overlay.place(relx=0, rely=-ease, relwidth=1, relheight=1)
+        except Exception:
+            pass
+        if step + 1 < steps:
+            self.after(interval, lambda: self._slide_overlay_up(
+                overlay, step + 1, steps, interval, on_done))
+        else:
+            try:
+                overlay.destroy()
+            except Exception:
+                pass
+            if on_done:
+                try:
+                    on_done()
+                except Exception:
+                    pass
 
     def _slide_curtain_up(self, curtain, x0: int, y0: int, w: int, h: int,
                           step: int = 0, steps: int = 9, interval: int = 16):

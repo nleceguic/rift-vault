@@ -222,11 +222,11 @@ class UnlockView(ctk.CTkFrame):
         self.after(0, lambda: self._on_setup_done(err))
 
     def _on_setup_done(self, err):
-        self._stop_progress()
         if err is None:
             logger.info("Primera configuración de contraseña maestra completada.")
-            self._on_unlocked()
+            self._on_unlocked()  # spinner sigue — se destruye con la vista
         else:
+            self._stop_progress()
             logger.error("Error durante la configuración inicial: %s", err)
             self._set_error(f"Error: {err}")
 
@@ -244,13 +244,12 @@ class UnlockView(ctk.CTkFrame):
         self.after(0, lambda: self._on_unlock_result(success))
 
     def _on_unlock_result(self, success):
-        self._stop_progress()
-
         if success:
             logger.info("Sesión desbloqueada correctamente.")
-            self._on_unlocked()
+            self._on_unlocked()  # spinner sigue — se destruye con la vista
             return
 
+        self._stop_progress()
         self._attempts += 1
         self._password_var.set("")
         self._pass_entry.configure(border_color=COLORS["danger"])
