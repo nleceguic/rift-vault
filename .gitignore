@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Tests y cobertura
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# IDEs y editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# SO
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Claude Code
+.claude/
+
+# Documentación interna
+ANALISIS_PROYECTO.txt
+
+# Logs y temporales
+*.log
+*.tmp
+*.bak
+*.orig
