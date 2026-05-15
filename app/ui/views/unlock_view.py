@@ -47,7 +47,7 @@ class UnlockView(ctk.CTkFrame):
             corner_radius=16, border_width=1,
             border_color=COLORS["border"],
         )
-        card.grid(row=0, column=0, padx=80, pady=40, ipadx=32, ipady=24)
+        card.grid(row=0, column=0, padx=80, pady=40, ipadx=20, ipady=12)
         card.grid_columnconfigure(0, weight=1)
         self._card = card
 
@@ -55,46 +55,33 @@ class UnlockView(ctk.CTkFrame):
             from PIL import Image
             _img = Image.open(LOGO_PATH)
             _w, _h = _img.size
-            _s = min(72 / _w, 72 / _h)
+            _s = min(160 / _w, 160 / _h)
             _logo_img = ctk.CTkImage(light_image=_img, dark_image=_img,
                                      size=(int(_w * _s), int(_h * _s)))
         except Exception:
             _logo_img = None
         ctk.CTkLabel(
-            card, text="Rift Vault",
-            image=_logo_img, compound="top",
-            font=("Segoe UI", 36, "bold"), text_color=COLORS["accent"],
-        ).grid(row=0, column=0, pady=(0, 4))
+            card, text="",
+            image=_logo_img,
+        ).grid(row=0, column=0, pady=(16, 6))
 
-        ctk.CTkLabel(
-            card, text="Tus contrasenas, seguras detras del nexo.",
-            font=FONTS["small"], text_color=COLORS["text_secondary"],
-        ).grid(row=1, column=0, pady=(0, 8))
-
-        subtitle = "Crea tu contrasena maestra" if self._is_setup else "Introduce tu contrasena maestra"
-        ctk.CTkLabel(
-            card, text=subtitle,
-            font=FONTS["body"], text_color=COLORS["text_secondary"],
-        ).grid(row=2, column=0, pady=(4, 20))
-
-        pass_label_row = 3
-        pass_entry_row = 4
+        # Row 1: última sesión (solo en unlock si hay dato)
         if not self._is_setup and self._last_unlock_at:
             formatted = _format_last_unlock(self._last_unlock_at)
             if formatted:
                 ctk.CTkLabel(
                     card, text=f"Última sesión: {formatted}",
                     font=FONTS["small"], text_color=COLORS["text_secondary"],
-                ).grid(row=3, column=0, pady=(0, 12))
-                pass_label_row = 4
-                pass_entry_row = 5
+                ).grid(row=1, column=0, pady=(0, 8))
 
+        # Row 2: label contraseña — Row 3: entry contraseña
         self._password_var = ctk.StringVar()
+        pass_label_text = "Crea tu contrasena maestra" if self._is_setup else "Introduce tu contrasena maestra"
         ctk.CTkLabel(
             card,
-            text="Contrasena maestra" + (" *" if self._is_setup else ""),
-            font=FONTS["small"], text_color=COLORS["text_secondary"], anchor="w",
-        ).grid(row=pass_label_row, column=0, sticky="w", padx=24, pady=(0, 4))
+            text=pass_label_text,
+            font=FONTS["body"], text_color=COLORS["text_secondary"], anchor="w",
+        ).grid(row=2, column=0, sticky="w", padx=24, pady=(0, 4))
 
         self._pass_entry = ctk.CTkEntry(
             card, textvariable=self._password_var,
@@ -104,15 +91,16 @@ class UnlockView(ctk.CTkFrame):
             height=40,
             placeholder_text="Minimo 8 caracteres" if self._is_setup else "",
         )
-        self._pass_entry.grid(row=pass_entry_row, column=0, sticky="ew", padx=24)
+        self._pass_entry.grid(row=3, column=0, sticky="ew", padx=24)
         self._pass_entry.bind("<Return>", lambda _: self._submit())
 
+        # Rows 4-5: confirmar contraseña (solo setup)
         self._confirm_var = ctk.StringVar()
         if self._is_setup:
             ctk.CTkLabel(
                 card, text="Confirmar contrasena *",
                 font=FONTS["small"], text_color=COLORS["text_secondary"], anchor="w",
-            ).grid(row=5, column=0, sticky="w", pady=(12, 4))
+            ).grid(row=4, column=0, sticky="w", padx=24, pady=(12, 4))
 
             self._confirm_entry = ctk.CTkEntry(
                 card, textvariable=self._confirm_var,
@@ -121,21 +109,24 @@ class UnlockView(ctk.CTkFrame):
                 border_color=COLORS["border"],
                 height=40,
             )
-            self._confirm_entry.grid(row=6, column=0, sticky="ew")
+            self._confirm_entry.grid(row=5, column=0, sticky="ew", padx=24)
             self._confirm_entry.bind("<Return>", lambda _: self._submit())
 
+        # Row 6: progress bar (oculto hasta que se necesite)
         self._progress = ctk.CTkProgressBar(
             card, fg_color=COLORS["bg_secondary"],
             progress_color=COLORS["accent"], height=4, corner_radius=2,
         )
         self._progress.set(0)
 
+        # Row 7: error (dinámico)
         self._error_var = ctk.StringVar(value="")
-        ctk.CTkLabel(
+        self._error_label = ctk.CTkLabel(
             card, textvariable=self._error_var,
             font=FONTS["small"], text_color=COLORS["danger"], wraplength=340,
-        ).grid(row=8, column=0, pady=(8, 0))
+        )
 
+        # Row 8: botón submit
         self._submit_btn = ctk.CTkButton(
             card,
             text="Crear contrasena y entrar" if self._is_setup else "Desbloquear",
@@ -144,22 +135,22 @@ class UnlockView(ctk.CTkFrame):
             height=42, corner_radius=8,
             command=self._submit,
         )
-        self._submit_btn.grid(row=9, column=0, sticky="ew", padx=24, pady=(16, 24))
+        self._submit_btn.grid(row=8, column=0, sticky="ew", padx=24, pady=(6, 12))
 
         note = (
             "AVISO: Esta contrasena cifra todas tus credenciales. No existe forma de recuperarla si la olvidas."
             if self._is_setup else
-            "Tus contrasenas estan protegidas con AES-128 + PBKDF2."
+            "Tus contrasenas, seguras detras del nexo."
         )
         ctk.CTkLabel(
             card, text=note,
             font=FONTS["small"], text_color=COLORS["text_secondary"], wraplength=340,
-        ).grid(row=10, column=0, pady=(12, 0))
+        ).grid(row=9, column=0, pady=(6, 0))
 
         ctk.CTkLabel(
             card, text=f"v{APP_VERSION}",
             font=FONTS["small"], text_color=COLORS["text_secondary"],
-        ).grid(row=11, column=0, pady=(12, 0))
+        ).grid(row=10, column=0, pady=(4, 0))
 
         self._pass_entry.focus_set()
 
@@ -267,7 +258,7 @@ class UnlockView(ctk.CTkFrame):
         self._set_error("")
         self._pass_entry.configure(border_color=COLORS["border"])
         self._submit_btn.configure(state="disabled", text=message)
-        self._progress.grid(row=7, column=0, sticky="ew", pady=(12, 0))
+        self._progress.grid(row=6, column=0, sticky="ew", pady=(8, 0))
         self._progress.configure(mode="indeterminate")
         self._progress.start()
 
@@ -292,5 +283,8 @@ class UnlockView(ctk.CTkFrame):
 
     def _set_error(self, message):
         self._error_var.set(message)
-        if not message:
+        if message:
+            self._error_label.grid(row=7, column=0, pady=(4, 0))
+        else:
+            self._error_label.grid_remove()
             self._pass_entry.configure(border_color=COLORS["border"])

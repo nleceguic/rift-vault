@@ -1,7 +1,7 @@
 """Configuracion global de colores, fuentes, rutas y constantes de Rift Vault."""
 
 APP_NAME    = "Rift Vault"
-APP_VERSION = "0.1.0"
+APP_VERSION = "1.0"
 APP_SLOGAN  = "Tus contrasenas, seguras detras del nexo."
 
 WINDOW_WIDTH      = 920

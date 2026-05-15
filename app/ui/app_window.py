@@ -53,11 +53,6 @@ class AppWindow(ctk.CTk):
         self.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.configure(fg_color=COLORS["bg_primary"])
 
-        try:
-            self.attributes("-alpha", 0.0)
-        except Exception:
-            pass
-        self.after(120, self._fade_window_in)
         self._show_unlock_screen()
 
     def report_callback_exception(self, exc, val, tb):
@@ -472,14 +467,6 @@ class AppWindow(ctk.CTk):
             if new_view and new_view.winfo_exists():
                 new_view.place(relx=0, rely=0, relwidth=1, relheight=1)
             self._transitioning = False
-
-    def _fade_window_in(self, step: int = 0, steps: int = 10, interval: int = 16):
-        try:
-            self.attributes("-alpha", step / steps)
-        except Exception:
-            return
-        if step < steps:
-            self.after(interval, lambda: self._fade_window_in(step + 1, steps, interval))
 
     def _slide_curtain_up(self, curtain, x0: int, y0: int, w: int, h: int,
                           step: int = 0, steps: int = 9, interval: int = 16):
