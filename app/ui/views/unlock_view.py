@@ -4,6 +4,7 @@ import logging
 import threading
 from datetime import datetime
 
+import tkinter as tk
 import customtkinter as ctk
 from typing import Callable
 
@@ -11,6 +12,45 @@ from app.core.crypto_service import CryptoService
 from app.config import COLORS, FONTS, APP_VERSION, LOGO_PATH
 
 logger = logging.getLogger(__name__)
+
+
+class _Spinner(tk.Canvas):
+    def __init__(self, parent, size=28):
+        dark = ctk.get_appearance_mode() == "Dark"
+        bg      = COLORS["bg_card"][1]   if dark else COLORS["bg_card"][0]
+        fg      = COLORS["accent"][1]    if dark else COLORS["accent"][0]
+        super().__init__(parent, width=size, height=size,
+                         bg=bg, highlightthickness=0, bd=0)
+        pad = size * 0.12
+        self._arc = self.create_arc(
+            pad, pad, size - pad, size - pad,
+            start=90, extent=270,
+            outline=fg, width=3, style="arc",
+        )
+        self._angle = 90
+        self._job = None
+        self._fg = fg
+        self._bg = bg
+        self.itemconfig(self._arc, outline=bg)  # invisible por defecto
+
+    def start(self):
+        self.itemconfig(self._arc, outline=self._fg)
+        self._tick()
+
+    def stop(self):
+        if self._job:
+            try:
+                self.after_cancel(self._job)
+            except Exception:
+                pass
+            self._job = None
+        self.itemconfig(self._arc, outline=self._bg)  # vuelve a invisible
+
+    def _tick(self):
+        self._angle = (self._angle - 15) % 360
+        self.itemconfig(self._arc, start=self._angle)
+        self._job = self.after(20, self._tick)
+
 
 _DELAYS = {3: 2, 4: 5}
 _DELAY_DEFAULT = 15
@@ -112,21 +152,14 @@ class UnlockView(ctk.CTkFrame):
             self._confirm_entry.grid(row=5, column=0, sticky="ew", padx=24)
             self._confirm_entry.bind("<Return>", lambda _: self._submit())
 
-        # Row 6: progress bar (oculto hasta que se necesite)
-        self._progress = ctk.CTkProgressBar(
-            card, fg_color=COLORS["bg_secondary"],
-            progress_color=COLORS["accent"], height=4, corner_radius=2,
-        )
-        self._progress.set(0)
-
-        # Row 7: error (dinámico)
+        # Row 6: error (dinámico)
         self._error_var = ctk.StringVar(value="")
         self._error_label = ctk.CTkLabel(
             card, textvariable=self._error_var,
             font=FONTS["small"], text_color=COLORS["danger"], wraplength=340,
         )
 
-        # Row 8: botón submit
+        # Row 7: botón submit
         self._submit_btn = ctk.CTkButton(
             card,
             text="Crear contrasena y entrar" if self._is_setup else "Desbloquear",
@@ -135,7 +168,11 @@ class UnlockView(ctk.CTkFrame):
             height=42, corner_radius=8,
             command=self._submit,
         )
-        self._submit_btn.grid(row=8, column=0, sticky="ew", padx=24, pady=(6, 12))
+        self._submit_btn.grid(row=7, column=0, sticky="ew", padx=24, pady=(6, 8))
+
+        # Row 8: spinner — siempre en el grid para no mover el layout
+        self._progress = _Spinner(card, size=28)
+        self._progress.grid(row=8, column=0, pady=(4, 4))
 
         note = (
             "AVISO: Esta contrasena cifra todas tus credenciales. No existe forma de recuperarla si la olvidas."
@@ -145,7 +182,7 @@ class UnlockView(ctk.CTkFrame):
         ctk.CTkLabel(
             card, text=note,
             font=FONTS["small"], text_color=COLORS["text_secondary"], wraplength=340,
-        ).grid(row=9, column=0, pady=(6, 0))
+        ).grid(row=9, column=0, pady=(4, 0))
 
         ctk.CTkLabel(
             card, text=f"v{APP_VERSION}",
@@ -258,13 +295,10 @@ class UnlockView(ctk.CTkFrame):
         self._set_error("")
         self._pass_entry.configure(border_color=COLORS["border"])
         self._submit_btn.configure(state="disabled", text=message)
-        self._progress.grid(row=6, column=0, sticky="ew", pady=(8, 0))
-        self._progress.configure(mode="indeterminate")
         self._progress.start()
 
     def _stop_progress(self):
         self._progress.stop()
-        self._progress.grid_remove()
         btn_text = "Crear contrasena y entrar" if self._is_setup else "Desbloquear"
         self._submit_btn.configure(state="normal", text=btn_text)
 
@@ -284,7 +318,7 @@ class UnlockView(ctk.CTkFrame):
     def _set_error(self, message):
         self._error_var.set(message)
         if message:
-            self._error_label.grid(row=7, column=0, pady=(4, 0))
+            self._error_label.grid(row=6, column=0, pady=(4, 0))
         else:
             self._error_label.grid_remove()
             self._pass_entry.configure(border_color=COLORS["border"])
