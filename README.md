@@ -6,6 +6,7 @@
 
 **Secure League of Legends account manager for Windows.**
 
+[![CI](https://github.com/nleceguic/rift-vault/actions/workflows/ci.yml/badge.svg)](https://github.com/nleceguic/rift-vault/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D4?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
 [![UI](https://img.shields.io/badge/UI-CustomTkinter-1f538d)](https://github.com/TomSchimansky/CustomTkinter)
