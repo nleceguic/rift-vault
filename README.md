@@ -2,6 +2,10 @@
 
 # Rift Vault
 
+[![Python](https://img.shields.io/badge/python-3.11+-blue)]()
+[![Tests](https://img.shields.io/badge/tests-423%20passing-brightgreen)]()
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)]()
+
 <img src="logo.png" alt="Rift Vault" width="120"/>
 
 **Secure League of Legends account manager for Windows.**
