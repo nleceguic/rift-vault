@@ -29,6 +29,7 @@
 - [Project Structure](#project-structure)
 - [Tests](#tests)
 - [Roadmap](#roadmap)
+- [Contributing](#contributing)
 - [License](#license)
 
 ---
@@ -359,6 +360,12 @@ Known limitations and their reasoning — not a list of promised features.
 - [ ] **Cross-platform support** — Windows-only today. Two integrations are the reason, both stdlib `ctypes`/`winreg`, no `pywin32`: screen capture protection (`app/core/win32_utils.py`) calls the Win32 `SetWindowDisplayAffinity` API directly, and the launcher's client auto-detection (`app/core/launcher_service.py`) queries the Windows registry via `winreg`. Both are already guarded behind `sys.platform` checks and degrade gracefully instead of crashing, but the app is only built, tested, and packaged for Windows 10/11 — Linux/macOS support would mean an alternative to `SetWindowDisplayAffinity` (no real equivalent on X11/Wayland/macOS) and a non-registry launcher lookup.
 - [ ] **Independent security audit** — the crypto and storage design (see [Security](#security) and [Modelo de amenaza](#modelo-de-amenaza)) has been implemented and covered by the test suite, but it has not gone through an external, independent security audit. Treat it as internally reviewed, not third-party verified.
 - [ ] **Optional encrypted sync between devices** — the vault is local-only by design: everything lives in `~/.rift_vault/` (`accounts.db`, `master.key`, `settings.json`), with no backend and no account system. The one network call the app makes is to Riot's public API for summoner rank/level lookups, which is opt-in and unrelated to credential storage. Encrypted multi-device sync is a possible future direction, not a planned or in-progress feature.
+
+---
+
+## Contributing
+
+PRs are welcome. For larger features or architectural changes, open an issue first to discuss the approach before writing code. Keep the test suite green — see [Tests](#tests) — and add coverage for new behavior where it makes sense.
 
 ---
 
