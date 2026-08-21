@@ -15,12 +15,12 @@
 
 </div>
 
-## Índice
+## Table of Contents
 
 - [Screenshots](#screenshots)
 - [Features](#features)
   - [Security](#security)
-  - [Modelo de amenaza](#modelo-de-amenaza)
+  - [Threat Model](#threat-model)
 - [Getting Started](#getting-started)
   - [Build executable](#build-executable)
 - [Data Storage](#data-storage)
@@ -140,21 +140,21 @@ Rift Vault stores, organizes, and protects your LoL credentials with production-
 | Atomic writes | `.tmp` + `os.replace()` — no corruption on disk failures |
 | Master password change | Re-encrypts all credentials without exposing plaintext on disk |
 
-### Modelo de amenaza
+### Threat Model
 
-Ningún mecanismo de la tabla anterior implica que el sistema sea "seguro" en abstracto: cada uno mitiga una amenaza concreta, bajo condiciones concretas. Esta sección delimita ese alcance explícitamente.
+None of the mechanisms in the table above make the system "secure" in the abstract: each one mitigates a specific threat, under specific conditions. This section makes that scope explicit.
 
-**Protege contra:**
-- Lectura del campo `password` de `accounts.db` sin la master password: cada contraseña se cifra individualmente con Fernet (AES-128-CBC + HMAC-SHA256) antes de guardarse en SQLite. *Matiz:* el cifrado es solo de ese campo, no de la fila completa — alias, username, notas, tags y Riot ID se almacenan sin cifrar en la misma base de datos (ver más abajo).
-- Captura de pantalla o grabación (OBS y similares) mientras hay username o password copiados en el portapapeles: `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` hace que la ventana aparezca en negro en la grabación mientras el portapapeles está "armado", y se desactiva automáticamente al expirar el TTL de 30s o al bloquearse la sesión por inactividad. Requiere Windows 10 build 2004+; en versiones anteriores no hay protección (la app sigue funcionando, sin este mitigante).
-- Fuerza bruta sobre la master password a través de la propia UI: PBKDF2-HMAC-SHA256 con 480.000 iteraciones eleva el coste por intento, y una penalización progresiva corta el ritmo de reintentos (intentos 1-2 sin espera, intento 3 → 2s, intento 4 → 5s, intento 5 en adelante → 15s fijos por intento).
-- Corrupción de datos por una escritura interrumpida a mitad de operación: `accounts.db` se apoya en las transacciones atómicas propias de SQLite (commit/rollback vía journal); `accounts.json` (formato legado), `settings.json` y las exportaciones JSON usan el patrón fichero `.tmp` + `os.replace()`.
+**Protects against:**
+- Reading the `password` field in `accounts.db` without the master password: each password is individually encrypted with Fernet (AES-128-CBC + HMAC-SHA256) before being stored in SQLite. *Caveat:* only that field is encrypted, not the whole row — alias, username, notes, tags, and Riot ID are stored unencrypted in the same database (see below).
+- Screen capture or recording (OBS and similar) while a username or password is copied to the clipboard: `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` makes the window appear black in the recording while the clipboard is "armed", and it's disabled automatically once the 30s TTL expires or the session locks due to inactivity. Requires Windows 10 build 2004+; on earlier versions there's no protection (the app still works, just without this mitigation).
+- Brute-forcing the master password through the app's own UI: PBKDF2-HMAC-SHA256 with 480,000 iterations raises the cost per attempt, and a progressive penalty slows down retries (attempts 1-2 no delay, attempt 3 → 2s, attempt 4 → 5s, attempt 5 onward → 15s fixed per attempt).
+- Data corruption from a write interrupted mid-operation: `accounts.db` relies on SQLite's own atomic transactions (commit/rollback via journal); `accounts.json` (legacy format), `settings.json`, and JSON exports use the `.tmp` file + `os.replace()` pattern.
 
-**No protege contra:**
-- Un keylogger u otro malware activo en el sistema mientras se teclea la master password: no existe ningún mecanismo anti-keylogging ni de entrada segura.
-- Un atacante con acceso físico y privilegios de administrador mientras la vault está desbloqueada: la clave Fernet derivada y la clave de firma HMAC residen en memoria del proceso mientras la sesión está activa, y son recuperables mediante un volcado de memoria o un depurador adjunto al proceso.
-- Pérdida de la master password: no hay recuperación posible por diseño. `master.key` solo guarda el salt y un canary cifrado con Fernet (nunca la contraseña ni un hash reversible de ella), así que sin la contraseña original los datos cifrados quedan irrecuperables.
-- Lectura de los campos no cifrados de `accounts.db` por cualquiera con acceso al fichero: alias, username, notas, tags y Riot ID viajan en texto plano dentro de la base de datos; solo `password` está cifrado. El HMAC de integridad detecta si esos campos fueron modificados externamente, pero no impide que sean leídos.
+**Does not protect against:**
+- A keylogger or other malware active on the system while the master password is typed: there's no anti-keylogging or secure-input mechanism.
+- An attacker with physical access and administrator privileges while the vault is unlocked: the derived Fernet key and the HMAC signing key live in process memory while the session is active, and are recoverable via a memory dump or a debugger attached to the process.
+- Losing the master password: there's no recovery mechanism by design. `master.key` only stores the salt and a Fernet-encrypted canary (never the password itself nor a reversible hash of it), so without the original password the encrypted data is unrecoverable.
+- Reading the unencrypted fields of `accounts.db` by anyone with access to the file: alias, username, notes, tags, and Riot ID travel in plaintext inside the database; only `password` is encrypted. The integrity HMAC detects if those fields were modified externally, but doesn't prevent them from being read.
 
 ---
 
@@ -284,7 +284,7 @@ flowchart TD
     FERNET --> VAULT[("password field in accounts.db")]
 ```
 
-This mirrors `CryptoService._derive_key()` and `.encrypt()` exactly — see [Security](#security) and [Modelo de amenaza](#modelo-de-amenaza) for what this does and doesn't protect against.
+This mirrors `CryptoService._derive_key()` and `.encrypt()` exactly — see [Security](#security) and [Threat Model](#threat-model) for what this does and doesn't protect against.
 
 ---
 
@@ -358,7 +358,7 @@ Coverage is configured in `pytest.ini` and scoped to the testable core — `app/
 Known limitations and their reasoning — not a list of promised features.
 
 - [ ] **Cross-platform support** — Windows-only today. Two integrations are the reason, both stdlib `ctypes`/`winreg`, no `pywin32`: screen capture protection (`app/core/win32_utils.py`) calls the Win32 `SetWindowDisplayAffinity` API directly, and the launcher's client auto-detection (`app/core/launcher_service.py`) queries the Windows registry via `winreg`. Both are already guarded behind `sys.platform` checks and degrade gracefully instead of crashing, but the app is only built, tested, and packaged for Windows 10/11 — Linux/macOS support would mean an alternative to `SetWindowDisplayAffinity` (no real equivalent on X11/Wayland/macOS) and a non-registry launcher lookup.
-- [ ] **Independent security audit** — the crypto and storage design (see [Security](#security) and [Modelo de amenaza](#modelo-de-amenaza)) has been implemented and covered by the test suite, but it has not gone through an external, independent security audit. Treat it as internally reviewed, not third-party verified.
+- [ ] **Independent security audit** — the crypto and storage design (see [Security](#security) and [Threat Model](#threat-model)) has been implemented and covered by the test suite, but it has not gone through an external, independent security audit. Treat it as internally reviewed, not third-party verified.
 - [ ] **Optional encrypted sync between devices** — the vault is local-only by design: everything lives in `~/.rift_vault/` (`accounts.db`, `master.key`, `settings.json`), with no backend and no account system. The one network call the app makes is to Riot's public API for summoner rank/level lookups, which is opt-in and unrelated to credential storage. Encrypted multi-device sync is a possible future direction, not a planned or in-progress feature.
 
 ---
