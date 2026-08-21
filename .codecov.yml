@@ -18,7 +18,6 @@ coverage:
       default:
         target: 80%
         threshold: 2%
-        informational: true
 
 ignore:
   - "app/ui/**"
