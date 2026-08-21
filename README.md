@@ -27,6 +27,7 @@
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
 - [Tests](#tests)
+- [Roadmap](#roadmap)
 - [License](#license)
 
 ---
@@ -305,6 +306,16 @@ pytest
 423 tests covering domain services, storage, encryption, advanced search, password generator, export/import, Riot API, and the launcher.
 
 Coverage is configured in `pytest.ini` and scoped to the testable core — `app/core/`, `app/storage/`, `app/hooks/`, and `app/config.py` — currently at **82%**. `app/ui/` (views, dialogs, widgets) is deliberately excluded from that number: it's Tkinter/CustomTkinter presentation code with no automated tests, since exercising it meaningfully needs a live display rather than a unit test. Excluding it isn't hiding a gap — every other 0%-covered file (`error_handler.py`, `service_registry.py`, `win32_utils.py`) stays fully counted against the 82%, because that *is* business logic missing tests. Running plain `pytest` produces the same scoped report plus a `coverage.xml` for CI.
+
+---
+
+## Roadmap
+
+Known limitations and their reasoning — not a list of promised features.
+
+- [ ] **Cross-platform support** — Windows-only today. Two integrations are the reason, both stdlib `ctypes`/`winreg`, no `pywin32`: screen capture protection (`app/core/win32_utils.py`) calls the Win32 `SetWindowDisplayAffinity` API directly, and the launcher's client auto-detection (`app/core/launcher_service.py`) queries the Windows registry via `winreg`. Both are already guarded behind `sys.platform` checks and degrade gracefully instead of crashing, but the app is only built, tested, and packaged for Windows 10/11 — Linux/macOS support would mean an alternative to `SetWindowDisplayAffinity` (no real equivalent on X11/Wayland/macOS) and a non-registry launcher lookup.
+- [ ] **Independent security audit** — the crypto and storage design (see [Security](#security) and [Modelo de amenaza](#modelo-de-amenaza)) has been implemented and covered by the test suite, but it has not gone through an external, independent security audit. Treat it as internally reviewed, not third-party verified.
+- [ ] **Optional encrypted sync between devices** — the vault is local-only by design: everything lives in `~/.rift_vault/` (`vault.db`, `master.key`, `settings.json`), with no backend and no account system. The one network call the app makes is to Riot's public API for summoner rank/level lookups, which is opt-in and unrelated to credential storage. Encrypted multi-device sync is a possible future direction, not a planned or in-progress feature.
 
 ---
 
