@@ -14,6 +14,20 @@
 
 </div>
 
+## Índice
+
+- [Screenshots](#screenshots)
+- [Features](#features)
+  - [Security](#security)
+  - [Modelo de amenaza](#modelo-de-amenaza)
+- [Getting Started](#getting-started)
+- [Data Storage](#data-storage)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Tests](#tests)
+- [License](#license)
+
 ---
 
 Rift Vault stores, organizes, and protects your LoL credentials with production-grade encryption — no cloud dependencies, no third-party services. Built with gaming-specific protections in mind: screen capture shielding for streamers, multi-account workflows, and shared physical access scenarios.
