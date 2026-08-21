@@ -22,6 +22,7 @@
   - [Security](#security)
   - [Modelo de amenaza](#modelo-de-amenaza)
 - [Getting Started](#getting-started)
+  - [Build executable](#build-executable)
 - [Data Storage](#data-storage)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
@@ -143,16 +144,16 @@ Rift Vault stores, organizes, and protects your LoL credentials with production-
 Ningún mecanismo de la tabla anterior implica que el sistema sea "seguro" en abstracto: cada uno mitiga una amenaza concreta, bajo condiciones concretas. Esta sección delimita ese alcance explícitamente.
 
 **Protege contra:**
-- Lectura del campo `password` de `vault.db` sin la master password: cada contraseña se cifra individualmente con Fernet (AES-128-CBC + HMAC-SHA256) antes de guardarse en SQLite. *Matiz:* el cifrado es solo de ese campo, no de la fila completa — alias, username, notas, tags y Riot ID se almacenan sin cifrar en la misma base de datos (ver más abajo).
+- Lectura del campo `password` de `accounts.db` sin la master password: cada contraseña se cifra individualmente con Fernet (AES-128-CBC + HMAC-SHA256) antes de guardarse en SQLite. *Matiz:* el cifrado es solo de ese campo, no de la fila completa — alias, username, notas, tags y Riot ID se almacenan sin cifrar en la misma base de datos (ver más abajo).
 - Captura de pantalla o grabación (OBS y similares) mientras hay username o password copiados en el portapapeles: `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` hace que la ventana aparezca en negro en la grabación mientras el portapapeles está "armado", y se desactiva automáticamente al expirar el TTL de 30s o al bloquearse la sesión por inactividad. Requiere Windows 10 build 2004+; en versiones anteriores no hay protección (la app sigue funcionando, sin este mitigante).
 - Fuerza bruta sobre la master password a través de la propia UI: PBKDF2-HMAC-SHA256 con 480.000 iteraciones eleva el coste por intento, y una penalización progresiva corta el ritmo de reintentos (intentos 1-2 sin espera, intento 3 → 2s, intento 4 → 5s, intento 5 en adelante → 15s fijos por intento).
-- Corrupción de datos por una escritura interrumpida a mitad de operación: `vault.db` se apoya en las transacciones atómicas propias de SQLite (commit/rollback vía journal); `accounts.json` (formato legado), `settings.json` y las exportaciones JSON usan el patrón fichero `.tmp` + `os.replace()`.
+- Corrupción de datos por una escritura interrumpida a mitad de operación: `accounts.db` se apoya en las transacciones atómicas propias de SQLite (commit/rollback vía journal); `accounts.json` (formato legado), `settings.json` y las exportaciones JSON usan el patrón fichero `.tmp` + `os.replace()`.
 
 **No protege contra:**
 - Un keylogger u otro malware activo en el sistema mientras se teclea la master password: no existe ningún mecanismo anti-keylogging ni de entrada segura.
 - Un atacante con acceso físico y privilegios de administrador mientras la vault está desbloqueada: la clave Fernet derivada y la clave de firma HMAC residen en memoria del proceso mientras la sesión está activa, y son recuperables mediante un volcado de memoria o un depurador adjunto al proceso.
 - Pérdida de la master password: no hay recuperación posible por diseño. `master.key` solo guarda el salt y un canary cifrado con Fernet (nunca la contraseña ni un hash reversible de ella), así que sin la contraseña original los datos cifrados quedan irrecuperables.
-- Lectura de los campos no cifrados de `vault.db` por cualquiera con acceso al fichero: alias, username, notas, tags y Riot ID viajan en texto plano dentro de la base de datos; solo `password` está cifrado. El HMAC de integridad detecta si esos campos fueron modificados externamente, pero no impide que sean leídos.
+- Lectura de los campos no cifrados de `accounts.db` por cualquiera con acceso al fichero: alias, username, notas, tags y Riot ID viajan en texto plano dentro de la base de datos; solo `password` está cifrado. El HMAC de integridad detecta si esos campos fueron modificados externamente, pero no impide que sean leídos.
 
 ---
 
@@ -183,6 +184,38 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### Build executable
+
+How to compile Rift Vault into a distributable Windows `.exe`, as a developer — not how to install it as a user (that's [Installation](#installation) above). There's no `.spec` file or build script in the repo yet, so this is the exact command that reproduces the current build; it must be run on Windows, since PyInstaller doesn't cross-compile.
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pytest
+pip install pyinstaller
+pyinstaller --onefile --windowed --name RiftVault --add-data "logo.png;." main.py
+```
+
+The executable is written to:
+
+```text
+dist/RiftVault.exe
+```
+
+What each flag is doing, and why:
+
+- `--onefile` — bundles everything into a single `.exe` (no companion folder to ship).
+- `--windowed` — no console window, matching that this is a Tkinter GUI app (`main.py` calls `app.mainloop()`).
+- `--add-data "logo.png;." ` — bundles `logo.png` next to the executable's extracted root. It's required: `app/config.py` resolves `LOGO_PATH` via `sys._MEIPASS` when frozen (see the `_resource()` helper), and every screen that shows the logo (`unlock_view.py`, `home_view.py`, `lock_overlay.py`, `app_window.py`) reads from that path. Without this flag the app would crash on startup with a missing-file error the moment it tries to render the logo. `;` is the Windows path separator PyInstaller expects for `--add-data` — on Linux/macOS it would be `:`, but this project only builds on Windows.
+- No `--icon` — the repo doesn't currently ship an `.ico` file, so the `.exe` uses PyInstaller's default icon rather than Rift Vault's own. `logo.png` alone can't be used here; PyInstaller requires `.ico` on Windows.
+- No `pywin32` and no extra `--hidden-import` were needed. Windows-specific behavior (`app/core/win32_utils.py`, `app/core/launcher_service.py`) uses only stdlib `ctypes`/`winreg`, which PyInstaller bundles automatically.
+
+**Verified**: built and ran this exact command end to end (423/423 tests passing beforehand) — the resulting `dist/RiftVault.exe` (~28 MB) launched cleanly with an isolated `RIFT_VAULT_DATA_DIR`, the log showed `ServiceRegistry` wiring up (`CryptoService` → `SqliteStorage` → `AccountService`, etc.) with no missing-module or missing-asset errors, the logo loaded correctly through `_MEIPASS`, and `accounts.db` was created on disk. **Not verified**: the full interactive flow (setting a master password and encrypting/decrypting a real credential through the UI), Riot Client auto-detection (no League client installed on the build machine), and screen capture protection (would need a recorder running to confirm visually). Don't take those three as confirmed working in the frozen build — only the non-interactive core paths above are.
+
+No secrets, `.env` files, databases, or logs get bundled: the build only ever pulls in `main.py`'s import graph plus the one explicit `--add-data` (`logo.png`). Runtime data (`accounts.db`, `master.key`, `settings.json`, logs) is created under `~/.rift_vault/` at first run, entirely outside the source tree PyInstaller reads from.
+
 ---
 
 ## Data Storage
@@ -192,7 +225,7 @@ All data is saved in `~/.rift_vault/` (user folder):
 | File | Contents |
 |---|---|
 | `master.key` | Salt + encrypted Fernet canary to verify the master password |
-| `vault.db` | SQLite database with accounts, password history, and Riot API cache |
+| `accounts.db` | SQLite database with accounts, password history, and Riot API cache |
 | `settings.json` | UI preferences (theme, timeout, Riot API key, launcher path) |
 
 The master password is **never** stored — only the salt and verification token. Every sensitive field in the database is individually Fernet-encrypted. If a legacy `accounts.json` is detected, migration to SQLite happens automatically on first launch.
@@ -247,7 +280,7 @@ flowchart TD
     MP[Master Password] --> KDF["PBKDF2-HMAC-SHA256<br/>480,000 iterations"]
     KDF --> KEY[Derived Key]
     KEY --> FERNET["Fernet<br/>AES-128-CBC + HMAC-SHA256"]
-    FERNET --> VAULT[("password field in vault.db")]
+    FERNET --> VAULT[("password field in accounts.db")]
 ```
 
 This mirrors `CryptoService._derive_key()` and `.encrypt()` exactly — see [Security](#security) and [Modelo de amenaza](#modelo-de-amenaza) for what this does and doesn't protect against.
@@ -325,7 +358,7 @@ Known limitations and their reasoning — not a list of promised features.
 
 - [ ] **Cross-platform support** — Windows-only today. Two integrations are the reason, both stdlib `ctypes`/`winreg`, no `pywin32`: screen capture protection (`app/core/win32_utils.py`) calls the Win32 `SetWindowDisplayAffinity` API directly, and the launcher's client auto-detection (`app/core/launcher_service.py`) queries the Windows registry via `winreg`. Both are already guarded behind `sys.platform` checks and degrade gracefully instead of crashing, but the app is only built, tested, and packaged for Windows 10/11 — Linux/macOS support would mean an alternative to `SetWindowDisplayAffinity` (no real equivalent on X11/Wayland/macOS) and a non-registry launcher lookup.
 - [ ] **Independent security audit** — the crypto and storage design (see [Security](#security) and [Modelo de amenaza](#modelo-de-amenaza)) has been implemented and covered by the test suite, but it has not gone through an external, independent security audit. Treat it as internally reviewed, not third-party verified.
-- [ ] **Optional encrypted sync between devices** — the vault is local-only by design: everything lives in `~/.rift_vault/` (`vault.db`, `master.key`, `settings.json`), with no backend and no account system. The one network call the app makes is to Riot's public API for summoner rank/level lookups, which is opt-in and unrelated to credential storage. Encrypted multi-device sync is a possible future direction, not a planned or in-progress feature.
+- [ ] **Optional encrypted sync between devices** — the vault is local-only by design: everything lives in `~/.rift_vault/` (`accounts.db`, `master.key`, `settings.json`), with no backend and no account system. The one network call the app makes is to Riot's public API for summoner rank/level lookups, which is opt-in and unrelated to credential storage. Encrypted multi-device sync is a possible future direction, not a planned or in-progress feature.
 
 ---
 
