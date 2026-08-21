@@ -40,42 +40,48 @@ Rift Vault stores, organizes, and protects your LoL credentials with production-
 
 ## Screenshots
 
-> **TODO:** replace each placeholder below with a real screenshot (PNG, ~1280px wide) saved under `screenshots/` with the exact filename shown. Use the light or dark theme consistently across all of them, and blur/replace any real account data with sample values before committing.
+<!-- screenshot: unlock_view.py — first-run master password creation -->
+![Setup](screenshots/setup.png "Setup — app/ui/views/unlock_view.py, first-run state: create the master password")
+**Setup** — creating the master password on first run.
 
-<!-- TODO screenshot: unlock_view.py — master password entry screen with the unlock spinner -->
-![Unlock screen](screenshots/unlock.png "Unlock screen — capture app/ui/views/unlock_view.py showing the master password field and unlock button (or the spinner mid-unlock)")
-**Unlock screen** — master password entry / first-run setup.
+<!-- screenshot: unlock_view.py — returning-user login -->
+![Unlock screen](screenshots/unlock.png "Unlock screen — app/ui/views/unlock_view.py, returning-user state: enter the master password")
+**Unlock screen** — master password entry on a returning session.
 
-<!-- TODO screenshot: home_view.py — dashboard with account stats -->
-![Dashboard](screenshots/home.png "Dashboard — capture app/ui/views/home_view.py with a handful of sample accounts so the stats are non-zero")
-**Dashboard** — overview stats after unlocking.
+<!-- screenshot: home_view.py — onboarding panel (no accounts yet) -->
+![First steps](screenshots/first-steps.png "First steps — app/ui/views/home_view.py, onboarding panel shown before any account has been added")
+**First steps** — onboarding checklist shown on first launch, before any account exists.
 
-<!-- TODO screenshot: accounts_view.py + filter_bar.py + account_card.py — account list -->
-![Accounts list](screenshots/accounts.png "Accounts list — capture app/ui/views/accounts_view.py with several account cards visible and the filter bar (app/ui/components/filter_bar.py) at the top, ideally with a search/tag filter active")
+<!-- screenshot: home_view.py — dashboard with account stats -->
+![Dashboard](screenshots/dashboard.png "Dashboard — app/ui/views/home_view.py once accounts exist: stats, region distribution, security alerts")
+**Dashboard** — overview stats once accounts exist.
+
+<!-- screenshot: accounts_view.py + filter_bar.py + account_card.py — account list -->
+![Accounts list](screenshots/accounts.png "Accounts list — app/ui/views/accounts_view.py with account cards and the filter bar (app/ui/components/filter_bar.py)")
 **Accounts list** — cards with search, filters, and sorting.
 
-<!-- TODO screenshot: account_form_dialog.py — create/edit account modal -->
-![Create/edit account](screenshots/account_form.png "Create/edit account — capture app/ui/components/account_form_dialog.py open with sample (non-real) data filled in")
+<!-- screenshot: account_form_dialog.py — create/edit account modal -->
+![Create/edit account](screenshots/account_form.png "Create/edit account — app/ui/components/account_form_dialog.py")
 **Account form** — create/edit modal with alias, region, tags, and notes.
 
-<!-- TODO screenshot: password_generator_dialog.py — generator with strength bar -->
-![Password generator](screenshots/password_generator.png "Password generator — capture app/ui/components/password_generator_dialog.py with the length slider, options, and strength/entropy bar visible")
+<!-- screenshot: password_generator_dialog.py — generator with strength bar -->
+![Password generator](screenshots/password_generator.png "Password generator — app/ui/components/password_generator_dialog.py")
 **Password generator** — configurable length, strength bar, entropy.
 
-<!-- TODO screenshot: password_history_dialog.py — masked history list -->
-![Password history](screenshots/password_history.png "Password history — capture app/ui/components/password_history_dialog.py with a few masked entries and the show/hide toggle")
+<!-- screenshot: password_history_dialog.py — masked history list -->
+![Password history](screenshots/password_history.png "Password history — app/ui/components/password_history_dialog.py")
 **Password history** — timestamped log with masked passwords.
 
-<!-- TODO screenshot: launch_dialog.py — quick-launch with credential copy -->
-![Quick launch](screenshots/launch_dialog.png "Quick launch — capture app/ui/components/launch_dialog.py showing the detected client path and one-click copy buttons")
+<!-- screenshot: launch_dialog.py — quick-launch with credential copy -->
+![Quick launch](screenshots/launch_dialog.png "Quick launch — app/ui/components/launch_dialog.py")
 **Quick launch** — one-click credential copy before launching the client.
 
-<!-- TODO screenshot: settings_view.py — Security/Appearance/Riot API/Launcher/Data tabs -->
-![Settings](screenshots/settings.png "Settings — capture app/ui/views/settings_view.py, ideally the Security tab showing auto-lock timeout options")
+<!-- screenshot: settings_view.py — Security/Appearance/Riot API/Launcher/Data tabs -->
+![Settings](screenshots/settings.png "Settings — app/ui/views/settings_view.py")
 **Settings** — security, appearance, Riot API key, launcher path, data.
 
-<!-- TODO screenshot: lock_overlay.py — inactivity lock screen -->
-![Lock overlay](screenshots/lock_overlay.png "Lock overlay — capture app/ui/components/lock_overlay.py triggered by the inactivity timer, re-authentication prompt visible")
+<!-- screenshot: lock_overlay.py — inactivity lock screen -->
+![Lock overlay](screenshots/lock_overlay.png "Lock overlay — app/ui/components/lock_overlay.py, triggered by the inactivity timer")
 **Lock overlay** — shown automatically after the inactivity timeout.
 
 ---
