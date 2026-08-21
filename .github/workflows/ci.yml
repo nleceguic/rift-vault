@@ -17,4 +17,11 @@ jobs:
 
       - run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - run: pytest --cov=app tests/
+      - run: pytest
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false

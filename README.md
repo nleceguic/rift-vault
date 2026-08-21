@@ -297,10 +297,13 @@ rift-vault/
 ## Tests
 
 ```bash
+pip install -r requirements-dev.txt
 pytest
 ```
 
 423 tests covering domain services, storage, encryption, advanced search, password generator, export/import, Riot API, and the launcher.
+
+Coverage is configured in `pytest.ini` and scoped to the testable core — `app/core/`, `app/storage/`, `app/hooks/`, and `app/config.py` — currently at **82%**. `app/ui/` (views, dialogs, widgets) is deliberately excluded from that number: it's Tkinter/CustomTkinter presentation code with no automated tests, since exercising it meaningfully needs a live display rather than a unit test. Excluding it isn't hiding a gap — every other 0%-covered file (`error_handler.py`, `service_registry.py`, `win32_utils.py`) stays fully counted against the 82%, because that *is* business logic missing tests. Running plain `pytest` produces the same scoped report plus a `coverage.xml` for CI.
 
 ---
 

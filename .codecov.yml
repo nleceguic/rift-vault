@@ -1,0 +1,29 @@
+# Codecov configuration for Rift Vault.
+#
+# Coverage is measured against the testable core only: app/core, app/storage,
+# app/hooks and app/config. app/ui (Tkinter/CustomTkinter views, dialogs and
+# widgets) has zero automated tests today - it needs a live display to
+# exercise meaningfully - so pytest itself never includes it in coverage.xml
+# (see [run] omit in pytest.ini). The `ignore` list below restates that same
+# boundary on the Codecov side, so the exclusion is visible here too and
+# doesn't silently drift if the pytest-side config ever changes.
+#
+# Target: 82% is the measured core coverage as of this config (1695
+# statements, 307 missed). 80% leaves a small buffer below that so a minor,
+# legitimate dip doesn't fail a PR outright; `threshold: 2%` adds further
+# slack on top of that. Revisit upward as coverage improves.
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 2%
+        informational: true
+
+ignore:
+  - "app/ui/**"
+  - "tests/**"
+
+comment:
+  layout: "reach,diff,flags,files"
+  require_changes: false
