@@ -216,31 +216,41 @@ The master password is **never** stored — only the salt and verification token
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────┐
-│                      UI Layer                       │
-│  AppWindow · Views · Components · Dialogs           │
-└──────────────────────────┬──────────────────────────┘
-                           │ EventBus / callbacks
-┌──────────────────────────▼──────────────────────────┐
-│                  Business Logic                     │
-│  AccountService · PasswordHistoryService            │
-│  ExportService · RiotApiService · LauncherService   │
-│  PasswordGenerator · SettingsService                │
-└──────────────────────────┬──────────────────────────┘
-                           │ Repository pattern
-┌──────────────────────────▼──────────────────────────┐
-│                  Storage Layer                      │
-│  BaseStorage (ABC) · SqliteStorage · JsonStorage    │
-└──────────────────────────┬──────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────┐
-│                  Security Layer                     │
-│  CryptoService · win32_utils                        │
-└─────────────────────────────────────────────────────┘
+Rift Vault follows a layered structure: the UI pulls services from a small DI container (`ServiceRegistry`), those services depend only on the `BaseStorage` abstraction (Repository pattern) rather than a concrete database, and storage delegates all encryption to a single `CryptoService`. There's no separate domain package — domain rules (validation, the `Account` model) and application orchestration both live together in `app/core/`, so the diagram shows them as one layer rather than inventing a split that isn't in the code.
+
+```mermaid
+flowchart TD
+    UI["UI Layer — app/ui/<br/>AppWindow · Views · Components · Dialogs"]
+    APP["Domain &amp; Application Services — app/core/<br/>AccountService · PasswordHistoryService · ExportService<br/>RiotApiService · LauncherService · PasswordGenerator · SettingsService"]
+    STORE["Storage Layer — app/storage/<br/>BaseStorage (ABC) · SqliteStorage · JsonStorage (legacy)"]
+    SEC["Security — app/core/crypto_service.py<br/>CryptoService: PBKDF2-HMAC-SHA256 to derive a key,<br/>then Fernet (AES-128-CBC + HMAC-SHA256) to encrypt/sign"]
+
+    UI -->|"ServiceRegistry.get()"| APP
+    APP -->|"BaseStorage (Repository)"| STORE
+    STORE -->|"encrypt / decrypt / sign"| SEC
+
+    UI -.->|"ctypes: SetWindowDisplayAffinity"| WIN[("Windows API")]
+    APP -.->|HTTPS| RIOT[("Riot Games API")]
+    APP -.->|subprocess| CLIENT[["RiotClientServices.exe /<br/>LeagueClient.exe"]]
 ```
 
-**Patterns:** Layered Architecture, Repository, Dependency Injection (ServiceRegistry), Pub/Sub (EventBus), Hook System.
+- **UI → Application** is a service-locator call (`ServiceRegistry.instance().get(...)`), not constructor injection at the call site — the container wires everything once at startup (`ServiceRegistry.build()`), UI code just looks services up by type afterwards.
+- **Application → Storage** only ever references `BaseStorage`, never `SqliteStorage` directly (see `account_service.py`), so the concrete storage engine is swappable.
+- **Storage → Security** is one-directional: `SqliteStorage`/`JsonStorage` hold a `CryptoService` instance and call it to encrypt the `password` field and to HMAC-sign the whole record; `CryptoService` has no knowledge of storage.
+- The dotted edges are side integrations, not part of the main dependency chain: `app_window.py` calls the Windows API directly for screen capture protection (bypassing the service layer entirely), `RiotApiService` calls the external Riot API over HTTPS, and `LauncherService` spawns the League/Riot client as an OS subprocess.
+- Two cross-cutting mechanisms aren't drawn as boxes to keep this readable: an `EventBus` (pub/sub, e.g. `account_card.py` emits `clipboard.armed` and `app_window.py` reacts to it) and a `HooksRegistry` (extension points fired from `account_service.py`, e.g. `before_lock`, `after_copy`). Both are internal signaling, not data-flow dependencies between layers.
+
+Master password → encrypted vault, end to end:
+
+```mermaid
+flowchart TD
+    MP[Master Password] --> KDF["PBKDF2-HMAC-SHA256<br/>480,000 iterations"]
+    KDF --> KEY[Derived Key]
+    KEY --> FERNET["Fernet<br/>AES-128-CBC + HMAC-SHA256"]
+    FERNET --> VAULT[("password field in vault.db")]
+```
+
+This mirrors `CryptoService._derive_key()` and `.encrypt()` exactly — see [Security](#security) and [Modelo de amenaza](#modelo-de-amenaza) for what this does and doesn't protect against.
 
 ---
 
