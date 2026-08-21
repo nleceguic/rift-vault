@@ -122,6 +122,22 @@ Rift Vault stores, organizes, and protects your LoL credentials with production-
 | Atomic writes | `.tmp` + `os.replace()` — no corruption on disk failures |
 | Master password change | Re-encrypts all credentials without exposing plaintext on disk |
 
+### Modelo de amenaza
+
+Ningún mecanismo de la tabla anterior implica que el sistema sea "seguro" en abstracto: cada uno mitiga una amenaza concreta, bajo condiciones concretas. Esta sección delimita ese alcance explícitamente.
+
+**Protege contra:**
+- Lectura del campo `password` de `vault.db` sin la master password: cada contraseña se cifra individualmente con Fernet (AES-128-CBC + HMAC-SHA256) antes de guardarse en SQLite. *Matiz:* el cifrado es solo de ese campo, no de la fila completa — alias, username, notas, tags y Riot ID se almacenan sin cifrar en la misma base de datos (ver más abajo).
+- Captura de pantalla o grabación (OBS y similares) mientras hay username o password copiados en el portapapeles: `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` hace que la ventana aparezca en negro en la grabación mientras el portapapeles está "armado", y se desactiva automáticamente al expirar el TTL de 30s o al bloquearse la sesión por inactividad. Requiere Windows 10 build 2004+; en versiones anteriores no hay protección (la app sigue funcionando, sin este mitigante).
+- Fuerza bruta sobre la master password a través de la propia UI: PBKDF2-HMAC-SHA256 con 480.000 iteraciones eleva el coste por intento, y una penalización progresiva corta el ritmo de reintentos (intentos 1-2 sin espera, intento 3 → 2s, intento 4 → 5s, intento 5 en adelante → 15s fijos por intento).
+- Corrupción de datos por una escritura interrumpida a mitad de operación: `vault.db` se apoya en las transacciones atómicas propias de SQLite (commit/rollback vía journal); `accounts.json` (formato legado), `settings.json` y las exportaciones JSON usan el patrón fichero `.tmp` + `os.replace()`.
+
+**No protege contra:**
+- Un keylogger u otro malware activo en el sistema mientras se teclea la master password: no existe ningún mecanismo anti-keylogging ni de entrada segura.
+- Un atacante con acceso físico y privilegios de administrador mientras la vault está desbloqueada: la clave Fernet derivada y la clave de firma HMAC residen en memoria del proceso mientras la sesión está activa, y son recuperables mediante un volcado de memoria o un depurador adjunto al proceso.
+- Pérdida de la master password: no hay recuperación posible por diseño. `master.key` solo guarda el salt y un canary cifrado con Fernet (nunca la contraseña ni un hash reversible de ella), así que sin la contraseña original los datos cifrados quedan irrecuperables.
+- Lectura de los campos no cifrados de `vault.db` por cualquiera con acceso al fichero: alias, username, notas, tags y Riot ID viajan en texto plano dentro de la base de datos; solo `password` está cifrado. El HMAC de integridad detecta si esos campos fueron modificados externamente, pero no impide que sean leídos.
+
 ---
 
 ## Getting Started
